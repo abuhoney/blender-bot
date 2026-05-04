@@ -1,0 +1,46 @@
+name: Blender Render
+
+on:
+  workflow_dispatch:
+    inputs:
+      script_name:
+        description: 'اسم ملف البايثون'
+        required: true
+      chat_id:
+        description: 'ايدي الشات حق تليجرام'
+        required: true
+
+jobs:
+  render:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download script from bot
+      run: |
+        curl -L "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/getFile?file_id=${{ github.event.inputs.script_name }}" -o file.json
+        FILE_PATH=$(cat file.json | jq -r '.result.file_path')
+        curl -L "https://api.telegram.org/file/bot${{ secrets.BOT_TOKEN }}/$FILE_PATH" -o script.py
+        
+    - name: Install Blender
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y blender ffmpeg
+        
+    - name: Run Blender Render
+      run: |
+        blender -b -P script.py -- output.mp4
+        
+    - name: Send video back to Telegram
+      run: |
+        curl -F chat_id=${{ github.event.inputs.chat_id }} \
+             -F video=@output.mp4 \
+             -F caption="✅ تم الرندر بنجاح | GitHub Actions" \
+             "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendVideo"
+             
+    - name: Cleanup
+      if: always()
+      run: rm -f script.py output.mp4 file.json
