@@ -1,19 +1,22 @@
 FROM python:3.11-slim
 
-# تثبيت Blender + المكتبات الناقصة للرندر بدون شاشة
-RUN apt-get update && apt-get install -y \
-    blender \
-    ffmpeg \
-    libegl1 \
-    libgl1-mesa-dri \
-    libglib2.0-0 \
-    libxrender1 \
-    libsm6 \
-    libxext6 \
-    && rm -rf /var/lib/apt/lists/*
+# نثبت المتغيرات الأساسية
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
+# مجلد العمل
 WORKDIR /app
+
+# نحدث pip ونثبت المتطلبات أول عشان الكاش
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ننسخ باقي ملفات المشروع
 COPY . .
-CMD ["python", "action_bot.py"]
+
+# Render يستخدم PORT من Environment
+EXPOSE 10000
+
+# تشغيل البوت
+CMD ["python", "app.py"]
